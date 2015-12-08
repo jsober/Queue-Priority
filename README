@@ -1,52 +1,30 @@
 NAME
-    Coro::PriorityQueue
+    Queue::Priority
 
 SYNOPSIS
-        use Coro::PriorityQueue;
-        use Coro;
+        use Queue::Priority;
+        use List::Util qw( shuffle );
 
-        my $queue = Coro::PriorityQueue->new(10);
+        my $queue = Queue::Priority->new( 10 );
 
-        my $producer = async {
-            foreach my $i (1 .. 10) {
-                $queue->insert($i);
-            }
+        foreach my $i ( shuffle 1 .. 10 ) {
+            $queue->insert( $i );
+        }
 
-            $queue->shutdown;
-        };
-
-        my $consumer = async {
-            while (1) {
-                my $i = $queue->remove or last;
-                printf("%d * 2 = %d\n", $i, $i * 2);
-            }
-        };
-
-        $producer->join, $consumer->join;
+        while (1) {
+            my $i = $queue->remove or last;
+            printf "%d * 2 = %d\n", $i, $i * 2;
+        }
 
 DESCRIPTION
     Priority queues automatically order their contents according to the
     inserted item's priority. Calling code must ensure that their queue
     items are comparable via this strategy (e.g. by overloading the <=>
-    operator).
-
-    Underneath, this is implemented as a simple array heap, using
-    Coro::Semaphore to control access.
+    operator). This module is implemented as an array heap.
 
 METHODS
-  new($max)
+  new
     Creates a new queue that can store $max items.
-
-  insert($item)
-    Inserts an item into the queue. Will block the thread until a slot is
-    available if necessary. If the queue has been shut down, croaks.
-
-    It is an error to insert undef into the queue.
-
-  remove
-    Removes and returns an item from the queue. Blocks until an item becomes
-    available if necessary. If the queue is shutdown, returns undefined
-    immediately.
 
   count
     Returns the number of items currently stored.
@@ -57,11 +35,36 @@ METHODS
   is_full
     Returns true if the queue is full.
 
+  peek
+    Returns the first (highest priority) element in the queue without
+    removing it from the queue.
+
+  is_shutdown
+    Returns true if the queue has been shut down.
+
   shutdown
     Shuts down the queue, after which no items may be inserted. Items
     already in the queue can be pulled normally until empty, after which
     further calls to "remove" will return undefined.
 
+  insert
+    Inserts an item into the queue. Dies if the queue is full, has been shut
+    down, or if the only argument is undefined.
+
+  remove
+    Removes and returns an item from the queue. If the queue is empty or
+    shutdown, returns undefined immediately.
+
+DEBUG
+  dump
+    Prints an indented representation of the heap structure.
+
 AUTHOR
     Jeff Ober <jeffober@gmail.com>
+
+COPYRIGHT AND LICENSE
+    This software is copyright (c) 2015 by Jeff Ober.
+
+    This is free software; you can redistribute it and/or modify it under
+    the same terms as the Perl 5 programming language system itself.
 
